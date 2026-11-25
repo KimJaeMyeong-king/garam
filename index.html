@@ -1907,15 +1907,14 @@ function train99Html(p){const e=Math.floor(p.exp);return`<h3>만렙 수련 · �
   <div class="btns"><button class="b" data-buy99="st" ${e<buyStatCost(p)?'disabled':''}>스탯 포인트 1점 · ${buyStatCost(p).toLocaleString()}</button><button class="b" data-buy99="st10" ${e<buyStatCost(p)*10+90000?'disabled':''}>스탯 10점 한꺼번에</button><button class="b alt" data-buy99="sk" ${e<buySkillCost(p)?'disabled':''}>스킬 포인트 1점 · ${buySkillCost(p).toLocaleString()}</button></div>`;}
 // ---- Esc 시스템 메뉴: 계속하기 · 저장 · 설정 · 단축키 · 랭킹 · 시작 화면 · 종료 ----
 function showSys(){dlgKind='sys';held.length=0;attackHeld=false;const where=P&&P._mode==='cloud'?'claude.ai 계정':'이 브라우저';
-  dlg(`<h2>⚙ 시스템 메뉴</h2><p class="sub">${esc(P?P.name:'')} · Lv${P?P.lv:''} · 저장 위치: ${where} (5초마다 자동 저장)</p>
+  dlg(`<h2>⚙ 시스템 메뉴</h2><p class="sub">${esc(P?P.name:'')} · Lv${P?P.lv:''} · 저장 위치: ${where} (자동 저장)</p>
   <div class="sysm">
    <button class="b" data-sys="back">▶ 게임으로 돌아가기 <small>Esc</small></button>
-   <button class="b alt" data-sys="save">💾 지금 저장하기</button>
    <button class="b alt" data-sys="opt">🔊 설정 (소리·화면) <small>O</small></button>
    <button class="b alt" data-sys="keys">⌨ 조작법·단축키</button>
    <button class="b alt" data-sys="rank">🏆 랭킹</button>
-   <button class="b alt" data-sys="title">🏠 저장하고 시작 화면으로</button>
-   <button class="b alt" data-sys="quit">⏻ 저장하고 게임 종료</button>
+   <button class="b alt" data-sys="title">🏠 시작 화면으로</button>
+   <button class="b alt" data-sys="quit">⏻ 게임 종료</button>
   </div><p class="sub" id="sysNote"></p>`);}
 function showKeys(){dlgKind='keys';const K=(k,t)=>`<div class="shoprow"><div><b>${k}</b></div><div class="sub">${t}</div></div>`;
   dlg(`<h2>⌨ 조작법·단축키</h2>${K('방향키 / WASD','이동 (땅을 눌러도 이동)')}${K('스페이스','기본 공격')}${K('1 ~ 0 · ⇧+1 ~ 0','기술 칸 20개 사용')}${K('Tab','가까운 대상 바꾸기 (Esc로 고정 풀기)')}${K('Z · X','체력약 · 마력약')}${K('F','주변 채집')}${K('I','소지품·장비')}${K('K','성장 (기술·스탯)')}${K('Q','퀘스트')}${K('N','지도')}${K('G','길 안내 켜기/끄기')}${K('H','마을로 귀환')}${K('P','파티')}${K('Enter','채팅')}${K('O','설정')}${K('B · M','배경음악 · 효과음 켜기/끄기')}${K('F11','전체 화면')}${K('Esc','창 닫기 · 시스템 메뉴')}<div class="btns"><button class="b alt" data-sys="menu">◀ 시스템 메뉴</button><button class="b alt" data-close>닫기</button></div>`);}
