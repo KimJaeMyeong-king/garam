@@ -833,8 +833,22 @@ function convertMp(p){const i=SKILLS[p.cls].findIndex(s=>s.conv);const s=SKILLS[
 /* 힘·민첩·지혜는 모든 직업 기술에 들어가고, 직업 핵심 스탯이 가장 크게 들어감 */const SK_STAT={warrior:[['str',.4],['vit',.25],['dex',.12],['int',.06]],rogue:[['dex',.4],['vit',.2],['str',.15],['int',.06]],mage:[['int',.4],['mana',.25],['dex',.1],['str',.06]],priest:[['int',.33],['mana',.25],['str',.12],['dex',.12]]};
 const SK_ATK=.7,SK_DMG=.8;
 // 기술 위력의 바탕: 전사·도적은 최대 체력이 가장 크게, 주술사·도사는 최대 마력이 가장 크게 반영 (공격력·직업 스탯도 함께)
-const skBasePhys=p=>(pAtk(p)*.4+skillBonus(p)*.6+(p.maxHp*.15+p.maxMp*.03)*buffMul(p,'atkMul'));
-const skBaseMag=p=>(p.baseMag*.4+skillBonus(p)*.6+p.maxMp*.15+p.maxHp*.02)*buffMul(p,'atkMul');// 기술의 공격력 몫, 기술 전체 위력(예전보다 낮춤)
+/* 기술마다 위력 바탕이 다름 (바람의 나라처럼 체력·마력이 계속 힘이 되면서, 직업 스탯도 의미 있게)
+   · 체력형/마력형(hp): 최대 체력(전사·도적)·최대 마력(주술사·도사)이 가장 크게 — 큰 범위기·전체기
+   · 스탯형(st): 힘·민첩·지혜(직업 핵심 스탯)가 가장 크게 — 한 대상을 노리는 빠른 기술
+   · 균형형: 둘을 고루
+   반반 투자한 캐릭터는 세 종류 위력이 거의 같고, 한쪽으로 몰면 그쪽 기술이 15~20% 강해짐 */
+const SK_PF={강타:'st',돌진베기:'st',파진검:'st',회오리베기:'hp',대지가르기:'hp',천지진동:'hp',천근추:'hp',금강불괴:'hp',패왕참:'hp',
+  급소찌르기:'st',독칼:'st',표창던지기:'st',난도질:'st',연환비수:'st',암습:'st',천살무:'hp',만검귀종:'hp',
+  화염구:'st',빙결창:'st',뇌신강림:'st',화룡진:'hp',천벌화염:'hp',화염폭풍:'hp',빙하시대:'hp',천지개벽:'hp',
+  부적술:'st',흡혼부:'st',천뢰부:'hp',천신강림:'hp',만신강림:'hp'};
+const SK_PFW={warrior:[6.5,1.2],rogue:[5.2,1.21],mage:[4.53,1.33],priest:[4.55,1.3]};/* [스탯형 스탯 몫, 체력·마력형 체력·마력 몫] — 직업마다 맞춘 값 */
+const skStatG=v=>v<=150?v:150+(v-150)*.8;/* 스탯형 기술은 스탯이 높아도 덜 줄어듦 */
+const skPfOf=p=>{if(!SKCTX)return null;const s=(SKILLS[SKCTX.cls||p.cls]||[])[SKCTX.i];return s?SK_PF[s.name]||null:null;};
+function skMix(p,A,V){const pf=skPfOf(p),am=buffMul(p,'atkMul');if(!pf)return A+skillBonus(p)*.6+V*am;const S=SK_STAT[p.cls].reduce((a,[k,w])=>a+skStatG(((p.stats||{})[k])||0)*w,0)*.6*am;const W=SK_PFW[p.cls]||[5,1.25];
+  return pf==='st'?.9*A+W[0]*S+.3*V*am:.6*A+.3*S+W[1]*V*am;}
+const skBasePhys=p=>skMix(p,pAtk(p)*.4,p.maxHp*.15+p.maxMp*.03);
+const skBaseMag=p=>skMix(p,p.baseMag*.4*buffMul(p,'atkMul'),p.maxMp*.15+p.maxHp*.02);// 기술의 공격력 몫, 기술 전체 위력(예전보다 낮춤)
 function skillBonus(p){return SK_STAT[p.cls].reduce((a,[k,w])=>a+ES(p,k)*w,0)*buffMul(p,'atkMul');}
 // 전체 화면 공격·필살기 추가 위력: 전사 체력+힘, 도적 체력+민첩, 주술사 마력+지혜, 도사 마력+지혜·힘·민첩·운
 const ULT_STAT={warrior:[['str',.55],['vit',.4],['dex',.15],['int',.08]],rogue:[['dex',.55],['vit',.35],['str',.2],['int',.08]],mage:[['int',.55],['mana',.4],['dex',.14],['str',.08]],priest:[['int',.45],['mana',.4],['str',.16],['dex',.16]]};
@@ -848,6 +862,7 @@ function learnBlock(p,i){if(p.commoner)return`직업을 고른 뒤 (Lv${JOB_LV} 
 const STATS=[['str','힘','물리 공격 +0.6 · 최대 체력 +2 · 갑옷 방어 +0.5%'],['dex','민첩','물리 공격 +0.2 · 공격 속도 +0.07%(최대 10%) · 회피 +0.15% · 명중 +0.1% · 이동 속도 +0.03%(최대 3%)'],['int','지혜','마법 공격 +0.6 · 기술 마력 소모 −0.12%(최대 20%)'],['luk','운','치명타 +0.3% · 20점마다 치명타 피해 +5% · 엽전 +0.2%(최대 30%)'],['vit','체력','최대 체력 +5 · 방어 +0.3 · 체력 재생 +0.05%p'],['mana','마력','최대 마력 +5 · 마력 재생 +0.05%p']];
 const STAT_PER_LV=5;
 const STAT_ROLE={warrior:'<b>전사의 장점</b> — 힘·체력이 전사 기술 위력과 재사용 시간을 가장 크게 올리고, 민첩·지혜도 기술 위력을 조금씩 올립니다. 범위 기술과 번지는 베기로 여러 마리를 한꺼번에 잡는 다수 사냥이 가장 빠릅니다. 핵심 스탯: <b>힘 · 체력</b>',rogue:'<b>도적의 장점</b> — 민첩·체력이 도적 기술 위력과 재사용 시간을 가장 크게 올리고, 힘·지혜도 기술 위력을 조금씩 올립니다. 한 대상을 몰아치는 1:1 파괴력이 가장 강합니다. 핵심 스탯: <b>민첩 · 체력</b>',mage:'<b>주술사의 장점</b> — 지혜·마력이 주술 위력과 재사용 시간을 가장 크게 올리고, 민첩·힘도 주술 위력을 조금씩 올립니다. 멀리서 혼자 사냥하는 솔로 사냥이 가장 강하고 공격이 만능입니다. 핵심 스탯: <b>지혜 · 마력</b>',priest:'<b>도사의 장점</b> — 지혜·마력이 도술 위력과 재사용 시간을 가장 크게 올리고, 힘·민첩도 도술 위력을 조금씩 올립니다. 버티면서 싸우고 동료를 지키는 파티 플레이에 특화되어 있습니다. 핵심 스탯: <b>지혜 · 마력</b>'};
+/* 기술 종류 안내 */{const T={warrior:['체력','힘'],rogue:['체력','민첩'],mage:['마력','지혜'],priest:['마력','지혜']};for(const c in T){const[a,b]=T[c];STAT_ROLE[c]+=`<br>· 기술은 <b>${a}형</b>(최대 ${a}이 클수록 강함 — 범위기·전체기)과 <b>스탯형</b>(${b}이 클수록 강함 — 한 대상 기술)으로 나뉩니다. ${a}·${b}을 반반 올리면 고르게, 한쪽으로 몰면 그쪽 기술이 15~20% 더 강해집니다.`;}}
 function statGuide(p){return`<details class="gemguide"><summary><b>스탯 안내</b> <span class="sub">— 무엇을 찍을까?</span></summary><div class="sub" style="line-height:1.6">
   · <b>몰아 찍으면 효율이 떨어집니다.</b> 한 스탯은 80점까지 100%, 81~160점은 60%, 161점부터는 30%만 효과가 납니다. 여러 스탯을 고루 올리는 편이 셉니다. (100·200·300점 각성 보너스는 찍은 점수 그대로 셉니다)<br>
   · ${p.commoner?`<b>평민</b>: ${JOB_LV}레벨까지는 모든 스탯이 레벨마다 1씩 자동으로 오릅니다. 직업을 고르면 그 직업만의 장점과 핵심 스탯이 여기에 표시됩니다.`:STAT_ROLE[p.cls]}<br>
@@ -1928,7 +1943,7 @@ function growHtml(){const p=P;const sk=SKILLS[p.cls];
       const now=r?`${costTxt(skCost(p,i))} · 재사용 ${(skCd(p,i)/1000).toFixed(1)}초`:`${costTxt(skCost(p,i,1))} · 재사용 ${(skCd(p,i,1)/1000).toFixed(1)}초`;
       const next=r&&r<MAXRANK?` → 다음 단계 ${costTxt(skCost(p,i,r+1))} · ${(skCd(p,i,r+1)/1000).toFixed(1)}초`:'';
       const slots=r?`<div class="slotpick">${Array.from({length:SLOTN},(_,k)=>`<button class="b sm ${p.slots[k]===i?'on':'alt'}" data-slot="${k}" data-sk="${i}" title="${k>=10?'쉬프트+':''}${(k%10+1)%10}번 칸">${slotLbl(k)}</button>`).join('')}</div>`:'';
-      return`<div class="shoprow"${r?` draggable="true" data-dragsk="${i}" title="끌어서 아래 단축키 칸에 놓을 수 있습니다" style="cursor:grab"`:''}><div><b>${s.ult?'★ ':''}${s.name}</b> <span class="sub">${r}/${MAXRANK}단계 · Lv${s.lv}${pre}</span><small>${s.desc}<br>${now}${next}${r?` · 위력 ×${skPower(r).toFixed(2)}`:''}${milestoneTxt(p,i,r)}</small>${slots}</div><div style="text-align:right"><button class="b sm" data-learn="${i}" ${blk?'disabled':''}>${r?'강화':'배우기'}</button>${blk&&blk!=='포인트 부족'?`<div class="sub">${blk}</div>`:''}</div></div>`;}).join('');}
+      return`<div class="shoprow"${r?` draggable="true" data-dragsk="${i}" title="끌어서 아래 단축키 칸에 놓을 수 있습니다" style="cursor:grab"`:''}><div><b>${s.ult?'★ ':''}${s.name}</b> ${SK_PF[s.name]?`<span class="awk on" title="${SK_PF[s.name]==='st'?'직업 핵심 스탯(힘·민첩·지혜)을 많이 올릴수록 강해집니다':(CLASSES[p.cls].phys?'최대 체력':'최대 마력')+'이 높을수록 강해집니다'}">${SK_PF[s.name]==='st'?'스탯형':(CLASSES[p.cls].phys?'체력형':'마력형')}</span> `:''}<span class="sub">${r}/${MAXRANK}단계 · Lv${s.lv}${pre}</span><small>${s.desc}<br>${now}${next}${r?` · 위력 ×${skPower(r).toFixed(2)}`:''}${milestoneTxt(p,i,r)}</small>${slots}</div><div style="text-align:right"><button class="b sm" data-learn="${i}" ${blk?'disabled':''}>${r?'강화':'배우기'}</button>${blk&&blk!=='포인트 부족'?`<div class="sub">${blk}</div>`:''}</div></div>`;}).join('');}
   else{const S=p.stats;body=`<p class="sub">${p.commoner?`평민은 ${JOB_LV}레벨까지 모든 스탯이 레벨마다 1씩 자동으로 오르고, 직업을 고른 뒤부터 `:''}레벨업마다 스탯 포인트 ${STAT_PER_LV}점을 받습니다. 한번 올린 스탯은 되돌릴 수 없습니다. 2칸보다 먼 적은 1칸마다 명중 −6%·피해 −6%(최소 70%)이고, 명중이 100%를 넘는 만큼 먼 거리 명중이 보완됩니다.</p>`+
     statGuide(p)+STATS.map(([k,n,d])=>`<div class="statrow"><b>${n}</b><b>${S[k]||0}${(S[k]||0)>80?`<small style="display:block;font-size:10px;color:#8a6a3a">효과 ${Math.round(effStat(S[k]))}</small>`:''}</b><small>${!p.commoner&&CD_STAT[p.cls].includes(k)?`<span class="awk on">★ ${CLASSES[p.cls].name} 핵심</span> `:''}${d}${awkRow(p,k)}${!p.commoner&&STAT_SK[p.cls]&&STAT_SK[p.cls][k]?' · <b>'+STAT_SK[p.cls][k]+'</b>':''}${!p.commoner&&CD_STAT[p.cls].includes(k)?' · <b>재사용 −0.15%</b>':''}</small><span class="btns"><button class="b sm" data-stat="${k}" data-n="1" ${(p.statPts||0)<1?'disabled':''}>+1</button><button class="b sm alt" data-stat="${k}" data-n="5" ${(p.statPts||0)<5?'disabled':''}>+5</button></span></div>`).join('')+
     `<p class="sub">공격 ${Math.round(pAtk(p))} · 마법 공격 ${Math.round(p.baseMag)} · 방어 ${Math.round(pDef(p))} · 체력 ${p.maxHp} · 마력 ${p.maxMp} · 이동 속도 +${Math.round(moveSpd(p)*1000)/10}%${p.dexOver?` (한계 도달, 넘친 민첩 ${p.dexOver} → 공격력 +${Math.round(p.dexOver*.2)})`:''} · 갑옷 방어 +${Math.round(((p.stats||{}).str||0)*.5)}% · 명중 ${Math.round(Math.min(1,accuracy(p))*100)}% · 재사용 −${Math.round(statCdr(p)*1000)/10}% · 초당 재생 체력 ${(hpRegenRate(p)*100).toFixed(2)}%·마력 ${(mpRegenRate(p)*100).toFixed(2)}% (쉬는 중 2배) · 치명 ${Math.round(p.crit*100)}% (피해 ${Math.round((p.critMul||1.5)*100)}%) · 회피 ${Math.round(p.evade*100)}%${usesHp(p)?` · 기술 추가 위력 +${Math.round(skillBonus(p))}`:''} · 전체기·필살기 추가 위력 +${Math.round(ultStat(p))}</p>`;}
