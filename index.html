@@ -825,16 +825,16 @@ function convertMp(p){const i=SKILLS[p.cls].findIndex(s=>s.conv);const s=SKILLS[
   if(use<5){log('바꿀 마력이 부족합니다.','c-warn');return false;}if(p.hp>=p.maxHp){log('체력이 가득합니다.','c-sys');return false;}
   p.mp-=use;healP(p,Math.round(use*s.conv*skPower(r)));floatText(p.x,p.y-1,'-'+use+' 마력','#8fb8ff',11);fx('heal',p.x,p.y,{});sfx('heal');return true;}
 // 기술 위력 = 공격력(마법은 마법 공격)×0.7 + 직업 스탯 몫. 전사 힘·체력, 도적 민첩·체력, 주술사·도사 지혜·마력 (기본 공격에는 붙지 않음)
-const SK_STAT={warrior:[['str',.45],['vit',.35]],rogue:[['dex',.45],['vit',.35]],mage:[['int',.45],['mana',.35]],priest:[['int',.45],['mana',.35]]};
+/* 힘·민첩·지혜는 모든 직업 기술에 들어가고, 직업 핵심 스탯이 가장 크게 들어감 */const SK_STAT={warrior:[['str',.4],['vit',.25],['dex',.12],['int',.06]],rogue:[['dex',.4],['vit',.2],['str',.15],['int',.06]],mage:[['int',.4],['mana',.25],['dex',.1],['str',.06]],priest:[['int',.33],['mana',.25],['str',.12],['dex',.12]]};
 const SK_ATK=.7,SK_DMG=.8;
 // 기술 위력의 바탕: 전사·도적은 최대 체력이 가장 크게, 주술사·도사는 최대 마력이 가장 크게 반영 (공격력·직업 스탯도 함께)
 const skBasePhys=p=>(pAtk(p)*.4+skillBonus(p)*.6+(p.maxHp*.15+p.maxMp*.03)*buffMul(p,'atkMul'));
 const skBaseMag=p=>(p.baseMag*.4+skillBonus(p)*.6+p.maxMp*.15+p.maxHp*.02)*buffMul(p,'atkMul');// 기술의 공격력 몫, 기술 전체 위력(예전보다 낮춤)
 function skillBonus(p){return SK_STAT[p.cls].reduce((a,[k,w])=>a+ES(p,k)*w,0)*buffMul(p,'atkMul');}
 // 전체 화면 공격·필살기 추가 위력: 전사 체력+힘, 도적 체력+민첩, 주술사 마력+지혜, 도사 마력+지혜·힘·민첩·운
-const ULT_STAT={warrior:[['str',.6],['vit',.5]],rogue:[['dex',.6],['vit',.5]],mage:[['int',.6],['mana',.5]],priest:[['int',.6],['mana',.5]]};
+const ULT_STAT={warrior:[['str',.55],['vit',.4],['dex',.15],['int',.08]],rogue:[['dex',.55],['vit',.35],['str',.2],['int',.08]],mage:[['int',.55],['mana',.4],['dex',.14],['str',.08]],priest:[['int',.45],['mana',.4],['str',.16],['dex',.16]]};
 function ultStat(p){return ULT_STAT[p.cls].reduce((a,[k,w])=>a+ES(p,k)*w,0)*buffMul(p,'atkMul');}
-const STAT_SK={warrior:{str:'전사 기술 +0.45 · 전체기·필살기 +0.6 · 명중 +0.3%',vit:'전사 기술 +0.35 · 전체기·필살기 +0.5'},rogue:{dex:'도적 기술 +0.45 · 전체기·필살기 +0.6 · 명중 +0.3%',vit:'도적 기술 +0.35 · 전체기·필살기 +0.5'},mage:{int:'주술 +0.45 · 전체기·필살기 +0.6 · 명중 +0.3%',mana:'주술 +0.35 · 전체기·필살기 +0.5'},priest:{int:'도술 +0.45 · 전체기·필살기 +0.6 · 명중 +0.3%',mana:'도술 +0.35 · 전체기·필살기 +0.5'}};
+/* 스탯 창 설명: 직업마다 각 스탯이 기술에 주는 몫 (SK_STAT·ULT_STAT에서 자동으로 만듦) */const STAT_SK=(()=>{const o={},NM={warrior:'전사 기술',rogue:'도적 기술',mage:'주술',priest:'도술'},HIT={warrior:'str',rogue:'dex',mage:'int',priest:'int'};for(const c in SK_STAT){o[c]={};SK_STAT[c].forEach(([k,w])=>{const u=(ULT_STAT[c].find(x=>x[0]===k)||[0,0])[1];o[c][k]=`${NM[c]} +${w} · 전체기·필살기 +${u}${HIT[c]===k?' · 명중 +0.3%':''}`;});}return o;})();
 // 재사용 시간: 기술 단계마다 −8%, 직업 스탯 1점마다 −0.15%(스탯 몫 최대 −30%). 최종 재사용은 원래의 40% 아래로 내려가지 않음.
 const CD_STAT={warrior:['str','vit'],rogue:['dex','vit'],mage:['int','mana'],priest:['int','mana']};
 const statCdr=p=>Math.min(.3,CD_STAT[p.cls].reduce((a,k)=>a+ES(p,k),0)*.0015);
@@ -842,7 +842,7 @@ const skCd=(p,i,r)=>{const s=SKILLS[p.cls][i];r=Math.max(1,r==null?skRank(p,i):r
 function learnBlock(p,i){if(p.commoner)return`직업을 고른 뒤 (Lv${JOB_LV} · 무예관 사범)`;const s=SKILLS[p.cls][i];const r=skRank(p,i);if(r>=MAXRANK)return'최고 단계';if(p.lv<s.lv)return`레벨 ${s.lv} 필요`;const pre=preOf(p,i);if(pre!=null&&skRank(p,pre)<1)return`[${SKILLS[p.cls][pre].name}] 먼저`;if((p.skillPts||0)<1)return'포인트 부족';return null;}
 const STATS=[['str','힘','물리 공격 +0.6 · 최대 체력 +2 · 갑옷 방어 +0.5%'],['dex','민첩','물리 공격 +0.2 · 공격 속도 +0.07%(최대 10%) · 회피 +0.15% · 명중 +0.1% · 이동 속도 +0.03%(최대 3%)'],['int','지혜','마법 공격 +0.6 · 기술 마력 소모 −0.12%(최대 20%)'],['luk','운','치명타 +0.3% · 20점마다 치명타 피해 +5% · 엽전 +0.2%(최대 30%)'],['vit','체력','최대 체력 +5 · 방어 +0.3 · 체력 재생 +0.05%p'],['mana','마력','최대 마력 +5 · 마력 재생 +0.05%p']];
 const STAT_PER_LV=5;
-const STAT_ROLE={warrior:'<b>전사의 장점</b> — 힘·체력이 전사 기술 위력과 재사용 시간을 올립니다. 범위 기술과 번지는 베기로 여러 마리를 한꺼번에 잡는 다수 사냥이 가장 빠릅니다. 핵심 스탯: <b>힘 · 체력</b>',rogue:'<b>도적의 장점</b> — 민첩·체력이 도적 기술 위력과 재사용 시간을 올립니다. 한 대상을 몰아치는 1:1 파괴력이 가장 강합니다. 핵심 스탯: <b>민첩 · 체력</b>',mage:'<b>주술사의 장점</b> — 지혜·마력이 주술 위력과 재사용 시간을 올립니다. 멀리서 혼자 사냥하는 솔로 사냥이 가장 강하고 공격이 만능입니다. 핵심 스탯: <b>지혜 · 마력</b>',priest:'<b>도사의 장점</b> — 지혜·마력이 도술 위력과 재사용 시간을 올립니다. 버티면서 싸우고 동료를 지키는 파티 플레이에 특화되어 있습니다. 핵심 스탯: <b>지혜 · 마력</b>'};
+const STAT_ROLE={warrior:'<b>전사의 장점</b> — 힘·체력이 전사 기술 위력과 재사용 시간을 가장 크게 올리고, 민첩·지혜도 기술 위력을 조금씩 올립니다. 범위 기술과 번지는 베기로 여러 마리를 한꺼번에 잡는 다수 사냥이 가장 빠릅니다. 핵심 스탯: <b>힘 · 체력</b>',rogue:'<b>도적의 장점</b> — 민첩·체력이 도적 기술 위력과 재사용 시간을 가장 크게 올리고, 힘·지혜도 기술 위력을 조금씩 올립니다. 한 대상을 몰아치는 1:1 파괴력이 가장 강합니다. 핵심 스탯: <b>민첩 · 체력</b>',mage:'<b>주술사의 장점</b> — 지혜·마력이 주술 위력과 재사용 시간을 가장 크게 올리고, 민첩·힘도 주술 위력을 조금씩 올립니다. 멀리서 혼자 사냥하는 솔로 사냥이 가장 강하고 공격이 만능입니다. 핵심 스탯: <b>지혜 · 마력</b>',priest:'<b>도사의 장점</b> — 지혜·마력이 도술 위력과 재사용 시간을 가장 크게 올리고, 힘·민첩도 도술 위력을 조금씩 올립니다. 버티면서 싸우고 동료를 지키는 파티 플레이에 특화되어 있습니다. 핵심 스탯: <b>지혜 · 마력</b>'};
 function statGuide(p){return`<details class="gemguide"><summary><b>스탯 안내</b> <span class="sub">— 무엇을 찍을까?</span></summary><div class="sub" style="line-height:1.6">
   · <b>몰아 찍으면 효율이 떨어집니다.</b> 한 스탯은 80점까지 100%, 81~160점은 60%, 161점부터는 30%만 효과가 납니다. 여러 스탯을 고루 올리는 편이 셉니다. (100·200·300점 각성 보너스는 찍은 점수 그대로 셉니다)<br>
   · ${p.commoner?`<b>평민</b>: ${JOB_LV}레벨까지는 모든 스탯이 레벨마다 1씩 자동으로 오릅니다. 직업을 고르면 그 직업만의 장점과 핵심 스탯이 여기에 표시됩니다.`:STAT_ROLE[p.cls]}<br>
