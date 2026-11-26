@@ -166,6 +166,7 @@ canvas#bigmap{width:100%;height:auto;display:block;border-radius:6px;background:
 #bar{align-self:center}#bar .slot{width:40px;height:46px}
 #menu{display:grid!important;grid-template-columns:repeat(4,33px);grid-auto-rows:24px;gap:3px;align-content:center;align-self:center}#menu[hidden]{display:none!important}#menu .slot{width:33px;height:24px}#menu .slot .ic{font-size:9.5px;white-space:nowrap;letter-spacing:-.05em}#menu .slot .k{font-size:7.5px;top:0;left:2px}
 #log{position:absolute!important;left:8px!important;top:8px!important;bottom:auto!important;width:min(340px,calc(100% - 16px))!important;min-height:0;max-height:none;display:block;font-size:11.5px;pointer-events:none;opacity:.95}
+#rq{width:178px;box-sizing:border-box;padding:4px 7px;align-self:center;font-size:11px;line-height:1.35;display:flex;flex-direction:column;gap:3px}#rq[hidden]{display:none!important}#rq .r{cursor:pointer;border-radius:4px;padding:2px 3px}#rq .r:hover{background:#0000000f}#rq b{font-family:var(--display);font-size:11.5px;color:#7a2a12;display:flex;justify-content:space-between}#rq b em{font-style:normal;color:#b03a20}#rq span{display:block;color:#3a2a14;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#rq .qb{height:5px;background:#0002;border-radius:3px;overflow:hidden;margin-top:1px}#rq .qb i{display:block;height:100%;background:linear-gradient(90deg,#d8a23a,#b03a20)}#rq small{color:#7a6040}@media (max-width:960px){#rq{width:100%;flex-direction:row}#rq .r{flex:1;min-width:0}}
 #log div{animation:fadeout 9s forwards}@keyframes fadeout{0%,75%{opacity:1}100%{opacity:0}}
 #target{position:absolute!important;top:8px!important;left:50%!important;transform:translateX(-50%)!important;width:170px!important}
 #party{position:absolute!important;top:8px!important;right:8px!important;left:auto!important;width:170px!important}
@@ -263,7 +264,7 @@ body.dragsk #bottom{position:relative;z-index:9999}
     <div class="bar ex"><i id="exI"></i><span id="exT"></span></div>
     <div class="row"><span>엽전 <b class="gold" id="sGold">0</b></span><span id="sQuest"></span></div>
     <div class="row pts" id="sPts" hidden></div>
-  </div><div id="bar" class="panel hud" hidden></div><div id="menu" hidden></div></div>
+  </div><div id="bar" class="panel hud" hidden></div><div id="menu" hidden></div><div id="rq" class="panel" hidden></div></div>
   <div id="dlg" hidden><div class="box panel" id="dlgBox"></div></div>
   <div id="inv" hidden><div class="box panel" id="invBox"></div></div>
   <div id="intro"><div class="ibox"><div class="ilogo">가람전기</div><div class="itext" id="introText"></div><div class="ivw"><video id="introVid" playsinline muted hidden preload="auto"></video><video id="introVid2" playsinline muted hidden preload="auto"></video><canvas id="introFx"></canvas></div><div class="isub" id="introSub"></div><button class="b istart" id="introStart">▶ 눌러서 시작</button><audio id="introBgm" preload="auto"></audio></div><button class="b alt isnd" id="introSnd" hidden>🔇 소리 켜기</button><button class="b alt iskip" id="introSkip">건너뛰기 ▶</button></div>
@@ -1079,8 +1080,8 @@ function buildField(id,name,ground,cfg){
     carve(m,wigglePath(r,m,CX,CY,gx,gy+2));rect(m,gx-2,gy-2,gx+3,gy-1,T.ROCK);rect(m,gx,gy,gx+1,gy,T.CAVEIN);st(m,gx-1,gy,T.ROCK);st(m,gx+2,gy,T.ROCK);
     m.portals.push({x:gx,y:gy,w:2,h:1,to:cfg.gateTo,tx:BR.ax,ty:BR.ay,boss:1});m.gate=[gx,gy];}
   m.spawn=ARR[cfg.links[0][0]];
-  {const dk=cfg.depth||1;const ord=cfg.spawns.slice().sort((a,b)=>MOBS[a.type].lv-MOBS[b.type].lv);const allow=Math.min(ord.length,dk<=2?1:dk===3?2:ord.length);const total=cfg.spawns.reduce((a,s)=>a+s.n*2,0);
-    const use=ord.slice(0,allow),ws=use.map((s,i)=>1+(dk>=4?i*.7:0)),wsum=ws.reduce((a,b)=>a+b,0);
+  {const dk=cfg.depth||1;const ord=cfg.spawns.slice().sort((a,b)=>MOBS[a.type].lv-MOBS[b.type].lv);const total=cfg.spawns.reduce((a,s)=>a+s.n*2,0);
+    /* 굴마다 몬스터 구성: 1굴 첫째 · 2굴 첫째+둘째 · 3굴 둘째 · 4굴 둘째+셋째 · 5굴 셋째 (두 종류뿐인 곳: 1·2굴 첫째, 3굴 둘 다, 4·5굴 둘째) */const use=caveMobIdx(ord.length,dk).map(i=>ord[i]),ws=use.map(()=>1),wsum=ws.length;
     m.spawns=use.map((s,i)=>({type:s.type,n:Math.max(4,Math.round(total*ws[i]/wsum)),at:null})).concat(spots.map(([t,at])=>({type:t,n:1,at:MOBS[t].mid?null:at})));
     const lvs=use.map(s=>MOBS[s.type].lv+(cfg.base==='field'?0:dk-1));m.lv=[Math.min(...lvs),Math.max(...lvs)];}
   m.spawns.forEach(s=>{if(!MOB_WHERE[s.type]){MOB_WHERE[s.type]=name;MOB_MAP[s.type]=id;}});
@@ -1118,11 +1119,13 @@ const GROUNDS=[
 ];
 GROUNDS.forEach(G=>{G.lv=G.lv.map(lvUp);});
 const CAVES=5;
+const caveMobIdx=(n,k)=>{const P3=[[0],[0,1],[1],[1,2],[2]],P2=[[0],[0],[0,1],[1],[1]];const t=n>=3?P3:n===2?P2:null;if(!t)return[...Array(n).keys()];return t[Math.max(0,Math.min(4,k-1))];};
+const caveTypes=(G,k)=>{const ord=G.spawns.slice().sort((a,b)=>MOBS[a.type].lv-MOBS[b.type].lv).map(s=>s.type);return caveMobIdx(ord.length,k).map(i=>ord[i]);};
 const caveId=(g,k)=>k===1?g:`${g}-${k}`;
 function buildWorld(){
   for(const G of GROUNDS)for(let k=1;k<=CAVES;k++){
     const IN=OPP[CAVE_SIDE[G.id]||'W'],OUT=OPP[IN];const links=[k===1?[IN,'town',null]:[IN,caveId(G.id,k-1),OUT]];if(k<CAVES)links.push([OUT,caveId(G.id,k+1),IN]);
-    const midPool=(k===1||G.id==='field')?[]:/* 너른들엔 중간보스 없음 */[...new Set(G.spawns.map(s=>s.type))].map(t=>`${t}_mid${k}`).filter(t=>MOBS[t]);const bossSpots=midPool.length?[[pick(midPool),[36,27]]]:[];
+    const midPool=(k===1||G.id==='field')?[]:/* 너른들엔 중간보스 없음 */caveTypes(G,k).map(t=>`${t}_mid${k}`)/* 그 굴에 나오는 몬스터의 중간보스만 */.filter(t=>MOBS[t]);const bossSpots=midPool.length?[[pick(midPool),[36,27]]]:[];
     buildField(caveId(G.id,k),`${G.name} ${k}굴`,G.ground,{...G,seed:G.seed+k*101,lv:[G.lv[0]+(k-1),G.lv[1]+(k-1)],links,bossSpots,depth:k,base:G.id,gate:k===CAVES?[8,6]:null,gateTo:G.id+'-boss'});MAPS[caveId(G.id,k)].midPool=midPool;}
   for(const G of GROUNDS)buildBossRoom(G);
   buildTown();
@@ -2944,6 +2947,7 @@ function updateTut(){const el=$('tut'),p=P;let h='';
   let y=8;el.style.top=y+'px';if(!el.hidden&&el.parentNode!==$('bottom')){y+=el.offsetHeight+6;}$('target').style.setProperty('top',y+'px','important');
   if(p.nav&&!p.nav.npc&&MAP.id===p.nav.map){log(`도착: ${MAP.name}`,'c-npc');p.nav=null;}}
 $('qbig').addEventListener('click',()=>{if(P&&running)showQuestDetail();});
+$('rq').addEventListener('click',e=>{const r=e.target.closest('[data-rq]');if(!r||!P||!running||uiOpen())return;if(r.dataset.rq==='e')showLetter(P);else showTavernLetter(P);});
 $('tut').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||!P)return;if(b.dataset.tutskip!=null){P.tut=TUT.length;log('튜토리얼을 건너뛰었습니다. Q(퀘스트)에서 [길 안내]를 쓸 수 있습니다.','c-sys');save();}if(b.dataset.navoff!=null){P.nav=null;}if(b.dataset.hintnav!=null&&hintNav){P.nav=hintNav;}b.blur();});
 // ================= 퀘스트 창 · 지도 창 =================
 function questList(p){const out=[];const q=p.quest,Q=QUESTS[q.idx];
@@ -2965,7 +2969,13 @@ function updateQTrack(){const el=$('qtrack');const L=questList(P);const key=JSON
 const talkPause=()=>!$('dlg').hidden&&['npc','letter','sys','keys','qdetail','recall','storybook'].includes(dlgKind);
 // 화면 오른쪽 위 큰 의뢰 표시 (눌러서 자세히)
 let qbigT=0;
-function updQBig(){if(NOW-qbigT<400)return;qbigT=NOW;const el=$('qbig');if(!el||!P)return;if(!running){el.hidden=true;return;}el.hidden=false;const p=P,q=p.quest,Q=QUESTS[q.idx];let h='';
+/* 반복 의뢰 창(단축키 옆): 연이 심부름 · 주모 주문 */function updRQ(){const el=$('rq');if(!el)return;if(!P||!running){el.hidden=true;return;}el.hidden=false;const p=P;let h='';
+  const bar=(c,n)=>`<div class="qb"><i style="width:${Math.round(Math.min(1,c/Math.max(1,n))*100)}%"></i></div>`;
+  if(p.lv<JOB_LV){h=`<div class="r"><b>🔁 반복 의뢰</b><span>연이 심부름·주모 주문</span><small>${JOB_LV}레벨(직업)부터 받을 수 있어요</small></div>`;}
+  else{const e=p.errand;h+=e?`<div class="r" data-rq="e"><b>🧒 연이 심부름<em>${Math.min(e.count,e.n)}/${e.n}</em></b><span>${MOBS[e.mob].name} · ${MOB_WHERE[e.mob]||''}</span>${bar(e.count,e.n)}</div>`:`<div class="r" data-rq="e"><b>🧒 연이 심부름</b><span>맡은 심부름 없음</span><small>눌러서 셋 중 고르기</small></div>`;
+    const o=p.order;if(o){const have=Math.min(p.items[o.item]||0,o.n);h+=`<div class="r" data-rq="t"><b>🍶 주모 주문<em>${have}/${o.n}</em></b><span>${o.item} · ${MOBS[o.mob]?MOBS[o.mob].name:''}</span>${bar(have,o.n)}</div>`;}else h+=`<div class="r" data-rq="t"><b>🍶 주모 주문</b><span>맡은 주문 없음</span><small>눌러서 셋 중 고르기</small></div>`;}
+  if(el.__h!==h){el.innerHTML=h;el.__h=h;}}
+function updQBig(){if(NOW-qbigT<400)return;qbigT=NOW;try{updRQ();}catch(e){}const el=$('qbig');if(!el||!P)return;if(!running){el.hidden=true;return;}el.hidden=false;const p=P,q=p.quest,Q=QUESTS[q.idx];let h='';
   if(p.commoner&&jobQuestOn(p))h=`<b>📜 촌장 의뢰 · 길을 정하게</b><span>무예관 사범에게 가서 직업 고르기</span><small>${p.lv>=JOB_LV?'지금 고를 수 있음':`레벨 ${JOB_LV} 필요 (지금 ${p.lv})`}</small>`;
   else if(Q){const nm=MOBS[Q.mob].name;const goal=Q.item?`${Q.item} 모으기`:Q.boss?`${nm} 쓰러뜨리기`:`${nm} 처치`;
     if(!q.active)h=`<b>📜 촌장 의뢰 ${q.idx+1}</b><span>새 의뢰: ${goal}</span><small>촌장에게 가서 맡으세요</small>`;
