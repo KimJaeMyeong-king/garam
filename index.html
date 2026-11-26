@@ -1272,7 +1272,7 @@ function atkPose(ak){if(!(ak>0&&ak<1))return{f:0,rot:0,sx:1,sy:1};
   if(ak<.3){const t=ease(ak/.3);return{f:-1.5*t,rot:-.05*t,sx:1,sy:1};}
   if(ak<.5){const t=ease((ak-.3)/.2);return{f:-1.5+6*t,rot:-.05+.12*t,sx:1,sy:1};}
   const t=ease((ak-.5)/.5);return{f:4.5*(1-t),rot:.07*(1-t),sx:1,sy:1};}
-const SWOOSH={warrior:{r:25,w:10,sweep:2.4,col:'#fff1c8'},rogue:{r:20,w:7,sweep:1.7,col:'#e8f0ff',twin:1}};
+const SWOOSH={commoner:{r:17,w:5,sweep:1.2,col:'#f3e8d2'},warrior:{r:25,w:10,sweep:2.4,col:'#fff1c8'},rogue:{r:20,w:7,sweep:1.7,col:'#e8f0ff',twin:1}};
 function drawSwoosh(cls,facing,cx,by,ak,glow){const S=SWOOSH[cls];if(!S||!(ak>.22&&ak<.85))return;const k=(ak-.22)/.63;const[dx,dy]=DIRS[facing];
   const ox=cx+dx*12,oy=by-22+dy*10;const base=DANG[facing],a0=base-S.sweep/2,head=a0+S.sweep*Math.min(1,ease(Math.min(1,k*1.5)));const fade=1-Math.max(0,(k-.45)/.55);
   const col=glow||S.col;const draw=(off,rad,wid,flip)=>{const N=12;ctx.save();ctx.globalCompositeOperation='lighter';
@@ -1578,6 +1578,7 @@ function nearest(p,r,n){const all=mobsNear(p.x,p.y,r);if(p!==P)return all.sort(b
   const front=all.filter(m=>inCone(p,m)).sort(byDist(p));const out=lockedOk(p,r)?[p.target,...front.filter(m=>m!==p.target)]:front;return out.slice(0,n);}
 function faceTo(p,t){const dx=t.x-p.x,dy=t.y-p.y;if(!dx&&!dy)return;p.facing=Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up');}
 function meleeTarget(p){const[dx,dy]=DIRS[p.facing];const t=mobAt(p.x+dx,p.y+dy);if(t)return t;
+  if(p.commoner)return null;/* 평민은 바라보는 앞 한 칸만 공격 */
   if(lockedOk(p,1)&&Math.abs(p.target.x-p.x)+Math.abs(p.target.y-p.y)===1){faceTo(p,p.target);return p.target;}return null;}
 function rangedTarget(p,r){if(lockedOk(p,r)){faceTo(p,p.target);return p.target;}
   const best=mobsNear(p.x,p.y,r).filter(m=>inCone(p,m)).sort(byDist(p))[0]||null;if(best&&!p.targetLocked)p.target=best;return best;}
@@ -1605,7 +1606,7 @@ function damageMob(p,m,d,color,crit){if(m.dead||!MAP.mobs.includes(m))return 0;
   if(p===P){const g=upGap(p,m);if(g>5){d=Math.max(1,Math.round(d*upDmgMul(g)));if(g>=10&&NOW>(p.gapWarnT||0)){p.gapWarnT=NOW+15000;log(`${m.d.name}은(는) 나보다 ${g}레벨 높아 피해가 거의 들어가지 않습니다. 레벨을 올려서 오세요.`,'c-warn');}}}/* 백어택: 몬스터 등 뒤에서 때리면 피해 30% 증가 */if(p===P&&m.facing&&DIRS[m.facing]){const[fx0,fy0]=DIRS[m.facing];if((p.x-m.x)*fx0+(p.y-m.y)*fy0<0){d=Math.round(d*1.3);if(NOW-(m.baT||0)>600){m.baT=NOW;floatText(m.x,m.y-1.2,'백어택!','#ffb040',14);}}}
   /* 직업 역할: 전사=여럿과 싸울 때, 도적=1:1·보스, 주술사=혼자 사냥 */
   if(p===P){const near=(x,y,r)=>MAP.mobs.filter(o=>!o.dead&&o!==m&&Math.max(Math.abs(o.x-x),Math.abs(o.y-y))<=r);
-    if(p.cls==='warrior'&&near(p.x,p.y,2).length>=2)d=Math.round(d*1.15);
+    if(p.cls==='warrior'&&!p.commoner&&near(p.x,p.y,2).length>=2)d=Math.round(d*1.15);
     else if(p.cls==='rogue'){if(!near(m.x,m.y,3).some(o=>o.aggro))d=Math.round(d*1.2);if(m.d.boss||m.d.mid)d=Math.round(d*1.15);
       /* 집중: 같은 적을 계속 때리면 한 번마다 +4%, 최대 +20% */if(p.focusM===m&&NOW-(p.focusT||0)<3000)p.focusN=Math.min(5,(p.focusN||0)+1);else{p.focusM=m;p.focusN=0;}p.focusT=NOW;d=Math.round(d*(1+.04*p.focusN));}
     else if(p.cls==='mage'&&!(NET.room&&NET.kind==='party'))d=Math.round(d*1.12);}
@@ -1671,7 +1672,7 @@ function basicAttack(){const p=P;if(!p||p.dead||uiOpen()||NOW<p.nextAtk)return;c
     proj(p,t,col,()=>{hitMag(p,t,p.cls==='mage'?.75:.65,col);sparks(t.x,t.y,col,5);},p.cls==='priest'?'charm':null);return;}
   const t=meleeTarget(p);attackAnim(p);if(t&&SND.on&&SND.ac)try{/* 빈 곳에 헛손질하면 소리 없음 */if(p.cls==='warrior'){noise(.22,{vol:.34,freq:450,to:2600,q:.7});blade(.07,.55);}else{noise(.1,{vol:.28,freq:1200,to:4200,q:.8});noise(.09,{vol:.22,freq:1400,to:4600,q:.8,delay:.07});tone(1900,.06,{type:'triangle',vol:.035,to:1100,delay:.04});}}catch(e){}if(!t)return;
   later(70,()=>{if(t.dead)return;fx('slash',t.x,t.y,{dir:p.facing,color:'#ffffff'});hitPhys(p,t,1.0,{basic:true});
-    /* 전사 베기 번짐: 레벨이 오를수록 더 많이·더 세게 (2마리+25레벨마다 1, 50%+레벨당 0.3%), 광분 중엔 2칸 */if(p.cls==='warrior'){const n=Math.min(5,2+Math.floor(p.lv/25)),pc=Math.min(.8,.5+p.lv*.003),rr=hasBuff(p,'광분')?2:1;MAP.mobs.filter(o=>!o.dead&&o!==t&&Math.max(Math.abs(o.x-p.x),Math.abs(o.y-p.y))<=rr).slice(0,n).forEach(o=>{fx('slash',o.x,o.y,{dir:p.facing,color:'#ffe9c0'});hitPhys(p,o,pc,{basic:true});});}});}
+    /* 전사 베기 번짐: 레벨이 오를수록 더 많이·더 세게 (2마리+25레벨마다 1, 50%+레벨당 0.3%), 광분 중엔 2칸 (평민은 앞 한 칸만) */if(p.cls==='warrior'&&!p.commoner){const n=Math.min(5,2+Math.floor(p.lv/25)),pc=Math.min(.8,.5+p.lv*.003),rr=hasBuff(p,'광분')?2:1;MAP.mobs.filter(o=>!o.dead&&o!==t&&Math.max(Math.abs(o.x-p.x),Math.abs(o.y-p.y))<=rr).slice(0,n).forEach(o=>{fx('slash',o.x,o.y,{dir:p.facing,color:'#ffe9c0'});hitPhys(p,o,pc,{basic:true});});}});}
 function cancelRecall(){if(P.recallAt){P.recallAt=0;log('귀환을 멈췄습니다.','c-warn');}}
 function usePotion(kind){const p=P;if(!p||p.dead||NOW<p.potCd)return;tutEvent('potion');const isHp=kind==='hp';const keys=isHp?['ssuk','insam']:['cheong','nok'];
   const miss=isHp?p.maxHp-p.hp:p.maxMp-p.mp;if(miss<=0){log(isHp?'체력이 가득합니다.':'마력이 가득합니다.','c-sys');return;}
@@ -2369,13 +2370,24 @@ function drawMobEnt(o,x,y){const cx=x*TS+16,by=y*TS+28;const sz=o.d.boss?1.75:o.
   if(o===P.target||o.d.boss||o.d.mid)nameTag(`${o.d.name} Lv${o.lv}`,cx,by-top-4,o.d.boss?'#ffb347':o.d.mid?'#ff9ad0':'#ffffff');
   if(o.d.mid){const t='⚔ 중간보스',y=by-top-20;ctx.save();ctx.font='bold 13px "Gowun Dodum",sans-serif';const w=ctx.measureText(t).width+12;ctx.fillStyle='rgba(70,0,50,.85)';rr(ctx,cx-w/2,y-10,w,17,5);ctx.fill();ctx.strokeStyle='#ff4ad0';ctx.lineWidth=1.5;ctx.stroke();ctx.fillStyle='#ffd0f2';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(t,cx,y-1);ctx.restore();
     if(!o.midSeen&&P&&Math.max(Math.abs(o.x-P.x),Math.abs(o.y-P.y))<=8){o.midSeen=1;floatText(o.x,o.y-1.6,'중간보스 출현!','#ff6ad8',18);log(`⚔ 중간보스 ${o.d.name}(Lv${o.lv})이(가) 가까이 있습니다!`,'c-warn');}}}
-function drawCommoner(f,cx,by,walk,ak){const k=`h_commoner_${HERO_COL[f]||0}`;if(!hasSpr(k))return false;sprDraw(ctx,k,cx,by,50,{});return true;}
+// 평민: 걸을 때 다리를 번갈아 내딛고 먼지가 일며, 공격할 때 몸을 뒤로 뺐다가 앞으로 내지르며 주먹 바람이 남
+function drawCommoner(f,cx,by,walk,ak,hurt,alpha){const col=HERO_COL[f]||0,k=`h_commoner_${col}`;if(!hasSpr(k))return false;
+  const[dx,dy]=DIRS[f]||[0,1];const A=ak>0&&ak<1?ak:0;const P0=atkPose(A);const side=dx;const rot=side?P0.rot*side:0;
+  const wk=walk>0&&walk<1?Math.sin(walk*Math.PI):0;
+  if(wk>.3){ctx.save();ctx.globalAlpha=.35*(1-walk);ctx.fillStyle='#d8c8a8';for(const q of[-1,1]){ctx.beginPath();ctx.ellipse(cx-dx*8+q*5*(1-Math.abs(dx)),by-1-dy*4,3+walk*3,1.6+walk,0,0,7);ctx.fill();}ctx.restore();}
+  const px=cx+dx*P0.f*1.2,py=by+dy*P0.f*.7;const sy=P0.sy*(1+.012*Math.sin(NOW/400));
+  ctx.save();ctx.translate(px,py);if(rot)ctx.rotate(rot*1.3);
+  const so={alpha:alpha==null?1:alpha,sy,tint:hurt?'#ffffff':null};
+  if(wk>0)drawSprWalk(ctx,k,50,so,Math.sin(walk*Math.PI)*(((P.x+P.y)&1)?1:-1),!!side,.24);else sprDraw(ctx,k,0,0,50,so);
+  ctx.restore();
+  if(A)drawSwoosh('commoner',f,cx,by,A,null);
+  return true;}
 function drawPlayerEnt(cx,by){const L=P.commoner?{...gearLook('warrior',0,0),robe:'#a8937a',trim:'#6b5a44',hat:'band',armor:null,weapon:null,helm:null}:gearLook(P.cls,P.wep.g,P.arm.g);const walk=P.mv?((NOW-P.mv.t0)/P.mv.dur):0;const hurt=NOW-(P.hitT||0)<110;const gl=GRADES[P.wep.g].glow||(P.wep.plus>=4?PLUSC[P.wep.plus]:null),ag=GRADES[P.arm.g].glow;
   const ak=(NOW-P.atkT)/260,ck=(NOW-P.castT)/320;const stealth=hasBuff(P,'stealth')||NOW<(P.ghostUntil||0);
   shadowAt(cx,by,10);
   // 회전베기: 그리는 방향만 돌리고 실제 바라보는 방향(P.facing)은 바꾸지 않음 → 끝나면 원래 방향
   let fFace=P.facing;if(P.spinT!=null&&NOW-P.spinT<380){const k=(NOW-P.spinT)/380;const R4=['down','left','up','right'];fFace=R4[(R4.indexOf(P.facing)+Math.floor(k*8))%4];}
-  if(P.commoner&&hasSpr('h_commoner_0')?!drawCommoner(fFace,cx,by,walk,ak):P.commoner||!drawHeroSpr(P.cls,fFace,cx,by,{ss:((P.x+P.y)&1)?1:-1,walk,hurt,atk:ak<1?ak:0,cast:ck<1?ck:0,alpha:stealth?.4:1,glow:gl,ac:accLook(P),wg:P.wep.g,plus:P.wep.plus}))drawOutlined(c=>drawHuman(c,0,0,{...L,robe:hurt?'#ffb0a0':L.robe,facing:fFace,walk,atk:ak<1?ak:0,cast:ck<1?ck:0}),cx,by,stealth?.4:1);
+  if(P.commoner&&hasSpr('h_commoner_0')?!drawCommoner(fFace,cx,by,walk,ak,hurt,stealth?.4:1):P.commoner||!drawHeroSpr(P.cls,fFace,cx,by,{ss:((P.x+P.y)&1)?1:-1,walk,hurt,atk:ak<1?ak:0,cast:ck<1?ck:0,alpha:stealth?.4:1,glow:gl,ac:accLook(P),wg:P.wep.g,plus:P.wep.plus}))drawOutlined(c=>drawHuman(c,0,0,{...L,robe:hurt?'#ffb0a0':L.robe,facing:fFace,walk,atk:ak<1?ak:0,cast:ck<1?ck:0}),cx,by,stealth?.4:1);
   nameTag(P.name,cx,by-(ATLAS_OK?58:52),'#ffffff');drawSay(P.say,cx,by-(ATLAS_OK?66:60));
   if(P.recallAt){const k=1-(P.recallAt-NOW)/RECALL_CAST;ctx.strokeStyle='#ffe9a0';ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(cx,by-14,20,-Math.PI/2,-Math.PI/2+k*Math.PI*2);ctx.stroke();}
   const sb=P.buffs.find(b=>b.shield>0&&b.until>NOW);if(sb){ctx.save();ctx.globalAlpha=.35+.1*Math.sin(NOW/150);ctx.strokeStyle='#ffd23a';ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,by-16,21,0,7);ctx.stroke();ctx.restore();}
