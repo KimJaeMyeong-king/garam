@@ -216,6 +216,7 @@ h3.clist{margin:10px 0 4px;font-family:var(--display);font-size:15px;color:var(-
 #bottom{justify-content:flex-start!important}
 #bottom>#tut{position:static!important;transform:none!important;top:auto!important;left:auto!important;right:auto!important;width:250px!important;max-width:250px!important;margin:0!important;align-self:stretch;font-size:11.5px;overflow:hidden}
 #bottom>#tut[hidden]{display:none!important}
+#bottom>#storyBox{flex:1 1 0!important;min-width:0;max-width:340px}#storyBox{box-sizing:border-box;padding:5px 9px;align-self:stretch;font-size:11.5px;line-height:1.45;cursor:pointer;overflow:hidden;display:flex;flex-direction:column}#storyBox[hidden]{display:none!important}#storyBox b{font-family:var(--display);color:var(--red);font-size:12.5px;display:flex;justify-content:space-between;gap:6px}#storyBox b small{font-family:inherit;color:#8a6a3a;font-size:10.5px;font-weight:400;white-space:nowrap}#storyBox p{margin:2px 0 0;color:#3a2a14;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}#storyBox:hover{filter:brightness(1.04)}
 @media (max-width:760px){#bottom>#tut{width:170px!important;font-size:10.5px}}
 button.b.sm .gcost{display:block;font-size:10.5px;margin-top:1px;text-align:center;color:#ffd77a!important}
 .gembtns{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}.gembtns button.b.sm{display:inline-flex;flex-direction:column;align-items:center;line-height:1.3;padding:4px 9px;height:auto}
@@ -253,7 +254,7 @@ body.dragsk #bottom{position:relative;z-index:9999}
     <div id="target" class="panel hud" hidden><b id="tName"></b><div class="bar hp"><i id="tHp"></i><span id="tHpT"></span></div></div>
     <div id="party" class="panel hud" hidden></div>
     <div id="qtrack" class="panel hud" hidden></div><div id="qbig" class="panel" hidden title="눌러서 의뢰 자세히 보기"></div><div id="selHint" hidden></div>
-    <div id="tut" class="panel hud" hidden></div>
+    <div id="tut" class="panel hud" hidden></div><div id="storyBox" class="panel" hidden title="눌러서 이야기책 열기"></div>
     <div id="touch" hidden><button class="u" data-d="up" aria-label="위">▲</button><button class="l" data-d="left" aria-label="왼쪽">◀</button><button class="r" data-d="right" aria-label="오른쪽">▶</button><button class="d" data-d="down" aria-label="아래">▼</button></div>
     <button id="atk" hidden>공격</button>
   </div>
@@ -722,6 +723,7 @@ const SKILLS={
     {name:'파진검',lv:55,preName:'천근추',mp:L=>35+.9*L,cd:10000,desc:'앞쪽 6칸을 꿰뚫는 검기, 300% 피해.',run:p=>{const[dx,dy]=DIRS[p.facing];attackAnim(p);sfx('dash');for(let i=1;i<=6;i++){const x=p.x+dx*i,y=p.y+dy*i;fx('slash',x,y,{dir:p.facing,color:'#bfe8ff',big:1,delay:i*40});const m=mobAt(x,y);if(m)later(i*40,()=>{if(!m.dead)hitPhysA(p,m,3.0);});}return true;}},
     {name:'금강불괴',lv:70,preName:'파진검',mp:L=>40+L,cd:50000,desc:'10초간 방어 2배, 즉시 체력 20% 회복, 주변 3칸에 200% 충격파.',run:p=>{addBuff(p,'금강불괴',10000,{defMul:2});healP(p,p.maxHp*.2);fx('burst',p.x,p.y,{r:3,color:'#ffd23a',fill:1});shake(5,250);mobsNear(p.x,p.y,3).forEach(m=>hitPhysA(p,m,2));sfx('buff');return true;}},
     {name:'패왕참',lv:85,ult:1,preName:'금강불괴',mp:L=>70+1.5*L,cd:40000,desc:'【전체 화면】 화면 안의 모든 적에게 400% 피해. 체력·힘이 높을수록 강해집니다.',run:p=>{fx('flash',p.x,p.y,{color:'#ff5a3a'});attackAnim(p);sfx('ult');sfx('quake');shake(12,700);allMobs(p).forEach((m,i)=>later(60+i*20,()=>{if(!m.dead){fx('slash',m.x,m.y,{dir:pick(FACES),color:'#ffcf6a',big:1});hitPhys(p,m,4.0,{area:1,extra:ultStat(p)});}}));return true;}},
+    {name:'투지',lv:10,mp:L=>14+.4*L,cd:60000,desc:'25초간 전사 기술 위력 +25%. (강화할수록 기술 위력 +1%씩 더)',run:p=>{addBuff(p,'투지',25000,{skMul:1.25+.01*((SKCTX&&SKCTX.r)||1)});fx('burst',p.x,p.y,{r:1,color:'#ffb040'});fx('heal',p.x,p.y,{});sfx('buff');return true;}},
   ],
   rogue:[
     {name:'급소찌르기',lv:1,mp:L=>4+.4*L,cd:2500,desc:'반드시 치명타가 나는 150% 찌르기.',run:p=>{const t=meleeTarget(p);if(!t)return noTarget();attackAnim(p);fx('slash',t.x,t.y,{dir:p.facing,color:'#ffffff',big:1});sfx('swing');hitPhys(p,t,1.5,{forceCrit:true});return true;}},
@@ -740,6 +742,7 @@ const SKILLS={
     {name:'암습',lv:55,preName:'연환비수',mp:L=>30+.8*L,cd:9000,desc:'앞의 적 급소를 찔러 반드시 치명타가 나는 400% 일격.',run:p=>{const t=meleeTarget(p);if(!t)return noTarget();attackAnim(p);fx('slash',t.x,t.y,{dir:p.facing,color:'#ff4060',big:1});hitPhys(p,t,4.0,{forceCrit:true});shake(5,200);return true;}},
     {name:'분신술',lv:70,preName:'암습',mp:L=>35+.8*L,cd:45000,desc:'12초간 회피 +25%, 공격 속도 +30%.',run:p=>{addBuff(p,'분신술',12000,{aspdMul:.7,evadeAdd:.25});fx('smoke',p.x,p.y,{});sfx('shadow');return true;}},
     {name:'만검귀종',lv:85,ult:1,preName:'분신술',mp:L=>65+1.4*L,cd:40000,desc:'【전체 화면】 화면 안의 모든 적을 세 번씩 베어 각 120%. 체력·민첩이 높을수록 강해집니다.',run:p=>{fx('flash',p.x,p.y,{color:'#c8b8ff'});sfx('ult');const ms=allMobs(p);p.ghostUntil=NOW+800;for(let k=0;k<3;k++)ms.forEach((m,i)=>later(k*180+i*15,()=>{if(!m.dead){fx('slash',m.x,m.y,{dir:FACES[(i+k)%4],color:'#e8e0ff'});hitPhys(p,m,1.2,{area:1,extra:ultStat(p)});}}));shake(8,600);return true;}},
+    {name:'살기',lv:10,mp:L=>14+.4*L,cd:60000,desc:'25초간 도적 기술 위력 +25%, 치명타 +10%. (강화할수록 기술 위력 +1%씩 더)',run:p=>{addBuff(p,'살기',25000,{skMul:1.25+.01*((SKCTX&&SKCTX.r)||1),critAdd:.1});fx('burst',p.x,p.y,{r:1,color:'#c84060'});fx('heal',p.x,p.y,{});sfx('buff');return true;}},
   ],
   mage:[
     {name:'화염구',lv:1,mp:L=>5+.6*L,cd:1100,desc:'7칸 안의 대상에게 마력 160% 불덩이.',run:p=>{const t=rangedTarget(p,7);if(!t)return noTarget();castAnim(p);sfx('fire');proj(p,t,'#ff8a2a',()=>{hitMag(p,t,1.6,'#ffb36b');sparks(t.x,t.y,'#ffa040',10);});return true;}},
@@ -756,6 +759,7 @@ const SKILLS={
     {name:'빙하시대',lv:55,preName:'화염폭풍',mp:L=>35+.9*L,cd:12000,desc:'자신 주변 3칸을 얼려 마법 공격 180% 피해와 1.5초 빙결.',run:p=>{castAnim(p);sfx('ice');fx('burst',p.x,p.y,{r:3,color:'#bfefff',fill:1});mobsNear(p.x,p.y,3).forEach(m=>{freeze(m,1500);hitMagA(p,m,1.8,'#bfefff');});return true;}},
     {name:'뇌신강림',lv:70,preName:'빙하시대',mp:L=>45+L,cd:15000,desc:'화면 안 무작위 적에게 벼락 8번, 각 마법 공격 200%.',run:p=>{const ms=allMobs(p);if(!ms.length)return noTarget();castAnim(p);for(let i=0;i<8;i++)later(i*110,()=>{const live=ms.filter(m=>!m.dead);if(!live.length)return;const m=pick(live);sfx('thunder');fx('bolt',m.x,m.y,{});hitMagA(p,m,2.0,'#e6ecff');});shake(6,900);return true;}},
     {name:'천지개벽',lv:85,ult:1,preName:'뇌신강림',mp:L=>80+1.6*L,cd:40000,desc:'【전체 화면】 화면 안의 모든 적에게 하늘과 땅의 불, 마법 공격 450%. 마력·지혜가 높을수록 강해집니다.',run:p=>{castAnim(p);fx('flash',p.x,p.y,{color:'#ff5a1a'});sfx('ult');sfx('fire');shake(12,800);fx('inferno',p.x,p.y,{});allMobs(p).forEach((m,i)=>later(120+i*25,()=>{if(!m.dead){fx('pillar',m.x,m.y,{color:'#ff5a1a'});hitMag(p,m,4.5,'#ffb36b',ultStat(p),{area:1});}}));return true;}},
+    {name:'주력증폭',lv:10,mp:L=>16+.5*L,cd:60000,desc:'25초간 주술 위력 +30%, 기술 마력 소모 −15%. (강화할수록 주술 위력 +1%씩 더)',run:p=>{addBuff(p,'주력증폭',25000,{skMul:1.3+.01*((SKCTX&&SKCTX.r)||1),mpMul:.85});fx('burst',p.x,p.y,{r:1,color:'#b070ff'});fx('heal',p.x,p.y,{});sfx('buff');return true;}},
   ],
   priest:[
     {name:'치유',lv:1,mp:L=>6+.5*L,cd:2500,desc:'체력을 (마력×2.2+12)×강화 위력만큼 회복.',run:p=>{const v=Math.round((p.baseMag*2.2+12)*(SKCTX?SKCTX.pw:1));healP(p,v);fx('heal',p.x,p.y,{});sfx('heal');return true;}},
@@ -772,9 +776,10 @@ const SKILLS={
     {name:'파사부',lv:55,preName:'회생부',mp:L=>32+.8*L,cd:9000,desc:'대상 주변 2칸에 마법 공격 260% 부적 폭발과 1초 기절.',run:p=>{const t=rangedTarget(p,7);if(!t)return noTarget();castAnim(p);sfx('charm');proj(p,t,'#ffe066',()=>{fx('burst',t.x,t.y,{r:2,color:'#fff2a0',fill:1});mobsNear(t.x,t.y,2).forEach(m=>{m.stunUntil=Math.max(m.stunUntil,NOW+1000);hitMagA(p,m,2.6,'#fff2a8');});},'charm');return true;}},
     {name:'팔괘진',lv:70,preName:'파사부',mp:L=>40+L,cd:45000,desc:'15초간 방어 +60%, 매초 체력 3% 재생.',run:p=>{addBuff(p,'팔괘진',15000,{defMul:1.6,regen:.03});fx('burst',p.x,p.y,{r:2,color:'#ffe9a0'});sfx('buff');return true;}},
     {name:'만신강림',lv:85,ult:1,preName:'팔괘진',mp:L=>70+1.5*L,cd:45000,desc:'【전체 화면】 화면 안의 모든 적에게 마법 공격 320% 신벌, 체력 완전 회복. 마력·지혜·힘·민첩·운이 높을수록 강해집니다.',run:p=>{castAnim(p);fx('flash',p.x,p.y,{color:'#fff2a0'});sfx('ult');sfx('thunder');shake(10,700);healP(p,p.maxHp);allMobs(p).forEach((m,i)=>later(100+i*25,()=>{if(!m.dead){fx('bolt',m.x,m.y,{color:'#fff7a0'});hitMag(p,m,3.2,'#fff2a8',ultStat(p),{area:1});}}));return true;}},
+    {name:'신력부',lv:10,mp:L=>16+.5*L,cd:60000,desc:'25초간 도술 위력 +25%, 방어 +15%. (강화할수록 도술 위력 +1%씩 더)',run:p=>{addBuff(p,'신력부',25000,{skMul:1.25+.01*((SKCTX&&SKCTX.r)||1),defMul:1.15});fx('burst',p.x,p.y,{r:1,color:'#ffe066'});fx('heal',p.x,p.y,{});sfx('buff');return true;}},
   ],
 };
-const SKN=13,SLOTN=20;/* 단축키 칸 20개: 1~0, 쉬프트+1~0 */
+const SKN=14,SLOTN=20;/* 단축키 칸 20개: 1~0, 쉬프트+1~0 */
 const slotLbl=k=>(k>=10?'⇧':'')+((k%10)+1)%10;// 기술 최대 13개(전사·도적), 단축키 칸 10개(1~9, 0)
 for(const c in SKILLS)SKILLS[c].forEach(s=>{if(s.preName)s.pre=SKILLS[c].findIndex(x=>x.name===s.preName);});
 // 스킬 트리: PRE[i] = 먼저 배워야 하는 기술 번호
@@ -782,7 +787,7 @@ const PRE=[null,0,0,1,2,3,5,null,6];
 const MAXRANK=20;
 // 강화: 단계마다 위력 +5%, 10단계 「각성」 +25%·특수 효과, 20단계 「극의」 +40%·더 강한 특수 효과
 const skPower=r=>{r=Math.max(1,r||1);return 1+.05*(r-1)+(r>=10?.25:0)+(r>=20?.4:0);};
-const SUPPORT=new Set(['금강불괴','분신술','회생부','팔괘진','철갑기','광분','은신','마력순환','치유','수호부','금강부','기혈전환','내공순환']);
+const SUPPORT=new Set(['투지','살기','주력증폭','신력부','금강불괴','분신술','회생부','팔괘진','철갑기','광분','은신','마력순환','치유','수호부','금강부','기혈전환','내공순환']);
 // 버프 시간이 1.5배로 늘었으니 설명의 'N초간'도 맞춰 고침
 for(const c in SKILLS)for(const sk of SKILLS[c])if(sk.desc&&/addBuff/.test(String(sk.run)))sk.desc=sk.desc.replace(/(\d+)초간/,(m,n)=>Math.round(n*1.5)+'초간');
 const SPECIAL={warrior:['「진동」 맞은 적 0.6초 기절','「패왕」 준 피해의 10%만큼 체력 흡수'],rogue:['「출혈」 3초간 매초 피해의 15%','「연환」 재사용 대기 초기화'],mage:['「작열」 3초간 매초 피해의 15% 화상','「연쇄」 3칸 안 다른 적 1명에게 피해 50% 튕김'],priest:['「축복」 준 피해의 10%만큼 체력 회복','「신통」 재사용 초기화·마력 5% 회복']};
@@ -810,7 +815,7 @@ function milestoneTxt(p,i,r){const s=SKILLS[p.cls][i];const sup=SUPPORT.has(s.na
   return`<br>${r>=10?'<b>':''}10단계 각성: 위력 +25% · 재사용 −10% · ${sup?'':'특수 효과 발동 10%: '}${t[0]}${r>=10?'</b>':''}<br>${r>=20?'<b>':''}20단계 극의: 위력 +40% · 재사용 −25% · ${sup?'':'발동 50%(각성 효과도 50%): '}${t[1]}${r>=20?'</b>':''}`;}
 /* 선행 기술 없음: 레벨만 되면 어떤 기술이든 배울 수 있음 (어떻게 찍느냐로 강함·조작이 달라짐) */const preOf=(p,i)=>null;
 const skRank=(p,i)=>(p.skills&&p.skills[i])||0;
-const skMp=(p,i,r)=>{const s=SKILLS[p.cls][i];r=Math.max(1,r==null?skRank(p,i):r);return Math.round(s.mp(p.lv)*Math.max(.4,1-.03*(r-1))*(1-(p.awkMp||0))*(1-(p.intMp||0)));};
+const skMp=(p,i,r)=>{const s=SKILLS[p.cls][i];r=Math.max(1,r==null?skRank(p,i):r);return Math.round(s.mp(p.lv)*Math.max(.4,1-.03*(r-1))*(1-(p.awkMp||0))*(1-(p.intMp||0))*buffMul(p,'mpMul'));};
 const usesHp=p=>!!CLASSES[p.cls].phys;
 // 기술 소모: 전사·도적은 체력(최대 체력의 5%, 필살기 10%)과 아주 적은 마력, 주술사·도사는 마력을 많이 씀(최대 마력의 6% 이상)
 function skCost(p,i,r){const s=SKILLS[p.cls][i];if(s.dump)return{t:s.dump,n:0,label:s.dump==='hp'?`현재 체력 ${s.pct*100}%`:'마력 전부'};if(s.conv)return{t:'mp',n:0};
@@ -820,7 +825,7 @@ function skCost(p,i,r){const s=SKILLS[p.cls][i];if(s.dump)return{t:s.dump,n:0,la
 const costTxt=c=>c.label||(c.n?`마력 ${c.n}`:'소모 없음');
 const dumpReady=(p,s)=>s.dump==='hp'?p.hp>=p.maxHp*.3:p.mp>=p.maxMp*.5;
 function rankMul(p,s){const i=SKILLS[p.cls].indexOf(s);return skPower(skRank(p,i));}
-function rawHit(p,m,d,color,crit){if(m.dead)return 0;d=Math.max(1,Math.round(d*SK_DMG-m.def*.3));sfx(crit?'crit':'hit');sparks(m.x,m.y,color,10,true);m.kb=null;return skSpecial(p,m,damageMob(p,m,d,color,crit));}
+function rawHit(p,m,d,color,crit){if(m.dead)return 0;d=Math.max(1,Math.round(d*SK_DMG*buffMul(p,'skMul')-m.def*.3));sfx(crit?'crit':'hit');sparks(m.x,m.y,color,10,true);m.kb=null;return skSpecial(p,m,damageMob(p,m,d,color,crit));}
 function convertMp(p){const i=SKILLS[p.cls].findIndex(s=>s.conv);const s=SKILLS[p.cls][i];const r=Math.max(1,skRank(p,i));const use=Math.min(Math.floor(p.mp),Math.round(p.maxMp*.6));
   if(use<5){log('바꿀 마력이 부족합니다.','c-warn');return false;}if(p.hp>=p.maxHp){log('체력이 가득합니다.','c-sys');return false;}
   p.mp-=use;healP(p,Math.round(use*s.conv*skPower(r)));floatText(p.x,p.y-1,'-'+use+' 마력','#8fb8ff',11);fx('heal',p.x,p.y,{});sfx('heal');return true;}
@@ -1609,14 +1614,14 @@ function distFx(p,m){const far=Math.max(0,Math.hypot(m.x-p.x,m.y-p.y)-2);return{
 function missMob(p,m){m.aggro=true;p.lastCombat=NOW;floatText(m.x,m.y,'빗나감','#c8c8c8',12);sfx('evade');return 0;}
 const hitPhysA=(p,m,mult,o)=>hitPhys(p,m,mult,{...(o||{}),area:1});
 const hitMagA=(p,m,mult,color,extra)=>hitMag(p,m,mult,color,extra,{area:1});
-function hitPhys(p,m,mult,o){o=o||{};if(SKCTX&&!SKCTX.fin)mult*=SKCTX.pw;const c=CLASSES[p.cls];const df=distFx(p,m);const sure=o.area||p.shadowStrike||(p.stealthStrike&&hasBuff(p,'stealth'));
+function hitPhys(p,m,mult,o){o=o||{};if(SKCTX&&!SKCTX.fin)mult*=SKCTX.pw;if(SKCTX&&!o.basic)mult*=buffMul(p,'skMul');/* 기술 위력 버프 */const c=CLASSES[p.cls];const df=distFx(p,m);const sure=o.area||p.shadowStrike||(p.stealthStrike&&hasBuff(p,'stealth'));
   if(!sure&&Math.random()>df.hit){breakStealth(p);return missMob(p,m);}
   let crit=o.forceCrit||Math.random()<p.crit+buffSum(p,'critAdd');
   if(p.stealthStrike&&hasBuff(p,'stealth')){crit=true;mult*=3;p.stealthStrike=false;}breakStealth(p);
   if(p.shadowStrike){crit=true;mult*=2;p.shadowStrike=false;}
   let d=(o.basic?pAtk(p):skBasePhys(p))*(o.basic?1:SK_DMG)*mult*df.mul*rand(.9,1.1)+(o.extra||0)*mult*df.mul;if(crit)d*=p.critMul||c.critMul;d=Math.max(1,Math.round(d-m.def*.5));sfx(crit?'crit':'hit');
   sparks(m.x,m.y,crit?'#ffe46a':'#fff4d8',crit?12:6,crit);if(crit)shake(4,130);return skSpecial(p,m,damageMob(p,m,d,crit?'#ffe04a':'#ffffff',crit));}
-function hitMag(p,m,mult,color,extra,o){breakStealth(p);if(SKCTX&&!SKCTX.fin)mult*=SKCTX.pw;const df=distFx(p,m);if(!(o&&o.area)&&Math.random()>df.hit)return missMob(p,m);const sk=!!SKCTX;const d=Math.max(1,Math.round(((sk?skBaseMag(p):p.baseMag*buffMul(p,'atkMul'))*(sk?SK_DMG:1)+(extra||0))*mult*df.mul*rand(.92,1.08)-m.def*.3));sfx('magic');return skSpecial(p,m,damageMob(p,m,d,color||'#cfe0ff',false));}
+function hitMag(p,m,mult,color,extra,o){breakStealth(p);if(SKCTX&&!SKCTX.fin)mult*=SKCTX.pw;if(SKCTX)mult*=buffMul(p,'skMul');/* 기술 위력 버프 */const df=distFx(p,m);if(!(o&&o.area)&&Math.random()>df.hit)return missMob(p,m);const sk=!!SKCTX;const d=Math.max(1,Math.round(((sk?skBaseMag(p):p.baseMag*buffMul(p,'atkMul'))*(sk?SK_DMG:1)+(extra||0))*mult*df.mul*rand(.92,1.08)-m.def*.3));sfx('magic');return skSpecial(p,m,damageMob(p,m,d,color||'#cfe0ff',false));}
 // 나보다 레벨이 높은 몬스터: 6레벨부터 주는 피해가 줄고, 10레벨 이상 높으면 피해 25%만 들어가고 몬스터가 더 아프게 때림 (광렙 방지)
 const upGap=(p,m)=>(m.lv||1)-(p.lv||1);const upDmgMul=g=>g>=10?.25:g>5?1-.1*(g-5):1;
 function damageMob(p,m,d,color,crit){if(m.dead||!MAP.mobs.includes(m))return 0;if(p===P&&earlyT(p)>0)d=Math.max(1,Math.round(d*(1+.5*earlyT(p))));/* 초보 보호: 주는 피해 최대 1.5배 */
@@ -2891,7 +2896,8 @@ let lastFrameTs=0;function frame(ts){if(lastFrameTs&&!document.hidden){const dt=
 setInterval(()=>{if(document.hidden&&NET.room)advanceGame(performance.now());},110);
 
 // ================= 튜토리얼 · 길 안내 =================
-try{$('bottom').insertBefore($('tut'),$('status'));}catch(e){}
+try{$('bottom').insertBefore($('tut'),$('status'));$('bottom').insertBefore($('storyBox'),$('tut'));}catch(e){}
+$('storyBox').addEventListener('click',()=>{if(P&&running&&!uiOpen())showStoryBook();});
 const TUT=[
   {t:'걸어 보기',d:'방향키나 W·A·S·D로 다섯 걸음 걸어 보세요. 땅을 눌러도 걸어갑니다.',ev:'step',n:5},
   {t:'촌장 만나기',d:'노란 화살표를 따라 촌장 앞에 서서 Space(또는 촌장을 클릭)로 말을 거세요.',ev:'chief',go:{map:'town',npc:'chief'}},
@@ -2975,7 +2981,10 @@ let qbigT=0;
   else{const e=p.errand;h+=e?`<div class="r" data-rq="e"><b>🧒 연이 심부름<em>${Math.min(e.count,e.n)}/${e.n}</em></b><span>${MOBS[e.mob].name} · ${MOB_WHERE[e.mob]||''}</span>${bar(e.count,e.n)}</div>`:`<div class="r" data-rq="e"><b>🧒 연이 심부름</b><span>맡은 심부름 없음</span><small>눌러서 셋 중 고르기</small></div>`;
     const o=p.order;if(o){const have=Math.min(p.items[o.item]||0,o.n);h+=`<div class="r" data-rq="t"><b>🍶 주모 주문<em>${have}/${o.n}</em></b><span>${o.item} · ${MOBS[o.mob]?MOBS[o.mob].name:''}</span>${bar(have,o.n)}</div>`;}else h+=`<div class="r" data-rq="t"><b>🍶 주모 주문</b><span>맡은 주문 없음</span><small>눌러서 셋 중 고르기</small></div>`;}
   if(el.__h!==h){el.innerHTML=h;el.__h=h;}}
-function updQBig(){if(NOW-qbigT<400)return;qbigT=NOW;try{updRQ();}catch(e){}const el=$('qbig');if(!el||!P)return;if(!running){el.hidden=true;return;}el.hidden=false;const p=P,q=p.quest,Q=QUESTS[q.idx];let h='';
+/* 아래창 왼쪽: 지금 진행 중인 이야기 (튜토리얼이 끝나면 그 자리에 보임) */function updStoryBox(){const el=$('storyBox');if(!el)return;if(!P||!running){el.hidden=true;return;}const p=P,idx=Math.min(p.quest?p.quest.idx:0,QUESTS.length-1);const c=qChapter(idx);let t,x;
+  if(p.commoner&&jobQuestOn(p)){t='제1장 · 끝 — 매듭을 품은 아이';x=STORY_JOB;}else if(c&&c.st){t=c.st.t;const mi=qMidIdx(c.g);x=(c.st.m&&mi>=0&&idx>=mi)?c.st.m:c.st.d;}else{t=STORY_PRO.t;x=STORY_PRO.d;}
+  const last=String(x).split(/\n\n+/).slice(-1)[0];const h=`<b>📖 ${t}<small>이야기책 ▸</small></b><p>${last}</p>`;if(el.__h!==h){el.innerHTML=h;el.__h=h;}el.hidden=false;/* 남는 자리가 좁으면 글만 감춤 (자리는 그대로) */el.style.visibility=el.getBoundingClientRect().width<140?'hidden':'';}
+function updQBig(){if(NOW-qbigT<400)return;qbigT=NOW;try{updRQ();updStoryBox();}catch(e){}const el=$('qbig');if(!el||!P)return;if(!running){el.hidden=true;return;}el.hidden=false;const p=P,q=p.quest,Q=QUESTS[q.idx];let h='';
   if(p.commoner&&jobQuestOn(p))h=`<b>📜 촌장 의뢰 · 길을 정하게</b><span>무예관 사범에게 가서 직업 고르기</span><small>${p.lv>=JOB_LV?'지금 고를 수 있음':`레벨 ${JOB_LV} 필요 (지금 ${p.lv})`}</small>`;
   else if(Q){const nm=MOBS[Q.mob].name;const goal=Q.item?`${Q.item} 모으기`:Q.boss?`${nm} 쓰러뜨리기`:`${nm} 처치`;
     if(!q.active)h=`<b>📜 촌장 의뢰 ${q.idx+1}</b><span>새 의뢰: ${goal}</span><small>촌장에게 가서 맡으세요</small>`;
