@@ -2776,7 +2776,7 @@ $('bkFile').addEventListener('change',async e=>{const file=e.target.files[0];e.t
   const mode=CAPS.cloud?'cloud':'guest';const n=firstEmpty(mode);if(n<0){renderAcct();$('acctNote').textContent='빈 자리가 없습니다. 캐릭터를 하나 지운 뒤 다시 불러오세요.';return;}begin(data,mode,n);});
 function showTitle(){if(NET.room)netLeave(true);running=false;['status','mapbox','bar','menu','target','touch','atk','party'].forEach(i=>$(i).hidden=true);$('title').hidden=false;pendingAction=null;renderAcct();classCards();try{titleSec('menu');}catch(e){}}
 // ---- 인트로: 켤 때 한 번. 제미나이 인트로 영상(INTRO_SRC)이 있으면 영상, 없으면 서장 이야기를 글로 보여 줌 ----
-const INTRO_SRC=['intro/intro1.mp4','intro/intro2.mp4','intro/intro3.mp4','intro/intro4.mp4'];/* 구글 Flow로 만든 서장 영상 4장면 */
+const INTRO_SRC=['intro/intro1.mp4','intro/intro2.mp4','intro/intro3.mp4','intro/intro4.mp4?v=2'];/* 구글 Flow로 만든 서장 영상 4장면 */
 let introDone=false;
 function endIntro(){if(introDone)return;introDone=true;try{const bg=$('introBgm');const f=setInterval(()=>{bg.volume=Math.max(0,bg.volume-.03);if(bg.volume<=0){clearInterval(f);bg.pause();}},80);}catch(e){}const el=$('intro');el.classList.add('out');['introVid','introVid2'].forEach(id=>{const v=$(id);try{introFade(v,0,600,()=>{try{v.pause();}catch(e){}});}catch(e){}});setTimeout(()=>{el.hidden=true;},700);try{titleSec('menu');}catch(e){}}
 function textIntro(){const lines=[STORY_PRO.t,...STORY_PRO.d.split(/(?<=[.?!])\s+/)];const box=$('introText');box.hidden=false;box.innerHTML='';
