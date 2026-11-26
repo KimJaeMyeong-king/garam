@@ -1924,7 +1924,7 @@ function growHtml(){const p=P;const sk=SKILLS[p.cls];
   let body='';
   if(growTab==='skill'&&p.commoner){body=`<div class="shoprow" style="display:block;text-align:center;padding:18px 10px"><b>평민은 아직 직업이 없어 기술을 배울 수 없습니다.</b><p class="sub" style="margin-top:8px">${JOB_LV}레벨이 되면 마을 광장 무예관 사범에게서 직업(전사·도적·주술사·도사)을 고를 수 있고, 그때부터 그 직업의 기술을 배웁니다.<br>그동안 모은 기술 포인트(지금 ${p.skillPts||0}점)는 그대로 남아 직업을 고른 뒤 쓸 수 있습니다.</p><p class="sub" style="color:#ffd77a">💡 촌장 의뢰를 이어서 하면 가장 빨리 ${JOB_LV}레벨이 됩니다 (경험치 3배·처치 수 절반).</p></div>`;}
   else if(growTab==='skill'){body=`<p class="sub">레벨은 배울 수 있는 조건입니다. 1점으로 배우거나 한 단계 올립니다(최대 20단계). 단계마다 위력 +5%, 마력 소모·재사용 시간 −3%. 10단계 「각성」과 20단계 「극의」에서 위력이 크게 오르고 특수 효과가 붙습니다(각성 10%, 극의 50% 확률로 발동)(10단계에서 재사용 시간 −10%, 20단계 극의에서 −25% 추가 · 보조 기술은 −15%씩 더). 직업 스탯으로도 재사용 시간이 줄어듭니다(지금 −${Math.round(statCdr(p)*1000)/10}%). 배운 기술은 아래 번호를 눌러 1~9·0번 칸에 직접 놓으세요.</p>`+
-    sk.map((s,i)=>{const r=skRank(p,i),blk=learnBlock(p,i);const pi=preOf(p,i);const pre=pi!=null?` · 선행: ${sk[pi].name}`:'';
+    sk.map((s,i)=>[s,i]).sort((x,y)=>x[0].lv-y[0].lv||x[1]-y[1])/* 레벨 순으로 보여 줌 (번호는 그대로라 배운 기술·단축키 칸 유지) */.map(([s,i])=>{const r=skRank(p,i),blk=learnBlock(p,i);const pi=preOf(p,i);const pre=pi!=null?` · 선행: ${sk[pi].name}`:'';
       const now=r?`${costTxt(skCost(p,i))} · 재사용 ${(skCd(p,i)/1000).toFixed(1)}초`:`${costTxt(skCost(p,i,1))} · 재사용 ${(skCd(p,i,1)/1000).toFixed(1)}초`;
       const next=r&&r<MAXRANK?` → 다음 단계 ${costTxt(skCost(p,i,r+1))} · ${(skCd(p,i,r+1)/1000).toFixed(1)}초`:'';
       const slots=r?`<div class="slotpick">${Array.from({length:SLOTN},(_,k)=>`<button class="b sm ${p.slots[k]===i?'on':'alt'}" data-slot="${k}" data-sk="${i}" title="${k>=10?'쉬프트+':''}${(k%10+1)%10}번 칸">${slotLbl(k)}</button>`).join('')}</div>`:'';
