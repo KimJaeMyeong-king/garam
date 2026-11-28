@@ -323,7 +323,7 @@ const DANG={right:0,down:Math.PI/2,left:Math.PI,up:-Math.PI/2};
 const ARTIFACT_URL='https://claude.ai/artifact/KJmwG7yNsvfCD334EBsyhg';
 let NOW=0;
 // 테스트용 빠른 회복 (정식 서비스 때는 hp:.012, mp:.02, tick:1500 정도로 낮추세요)
-const REGEN={hp:.012,mp:.015,idleMul:2,tick:1000};/* 초당 기본 재생(쉬는 중 2배): 체력 1.2%·마력 1.5% */
+const REGEN={hp:.006,mp:.008,idleMul:2,tick:1000};/* 초당 기본 재생(쉬는 중 2배): 체력 0.6%·마력 0.8% */
 // 재생: 1초마다 최대치의 일정 비율 회복. 체력 1점마다 체력 재생 +0.05%p, 마력 1점마다 마력 재생 +0.05%p.
 // 스탯 효율: 한 스탯에 몰아 찍지 않도록 80점까지 100%, 81~160점 60%, 161점부터 30%만 효과
 const effStat=v=>v<=80?v:v<=160?80+(v-80)*.6:128+(v-160)*.3;
@@ -1029,6 +1029,7 @@ const RECALL_CAST=800,RECALL_CD=10000;
 const T={GRASS:0,PATH:1,WATER:2,TREE:3,WALL:4,ROOF:5,FLOWER:6,ROCK:7,STONE:8,FENCE:9,DGRASS:10,DIRT:11,BRIDGE:12,DOOR:13,PINE:14,SWAMP:15,SNOW:16,CAVE:17,CAVEIN:18,ASH:19,GLOOM:20,CLOUD:21,SEA:22,ABYSS:23,HEAVEN:24,BLD:25};
 const SOLID=new Set([T.WATER,T.TREE,T.WALL,T.ROOF,T.ROCK,T.FENCE,T.DOOR,T.PINE,T.BLD]);
 const MAPS={};
+/* 몬스터 이동을 1.5배 느리게 (쫓아오는 속도 부담 줄임) */for(const k in MOBS)MOBS[k].move=Math.round((MOBS[k].move||400)*1.5);
 const MOB_WHERE={},MOB_MAP={};
 function newMap(id,name,w,h,ground){const m={id,name,w,h,ground,t:new Uint8Array(w*h).fill(ground),portals:[],npcs:[],mobs:[],drops:[],spawns:[],cache:null,mini:null};MAPS[id]=m;return m;}
 const gt=(m,x,y)=>(x<0||y<0||x>=m.w||y>=m.h)?T.TREE:m.t[y*m.w+x];
@@ -1681,7 +1682,7 @@ function damageMob(p,m,d,color,crit){if(m.dead||!MAP.mobs.includes(m))return 0;i
   if(m.hp<=0)killMob(m);return d;}
 // 몬스터 쓰러짐(상태) → 공동 처치 알림 → 내가 30초 안에 때린 몬스터면 각자 보상
 function killMob(m){mobDie(m);if(NET.room&&NET.isHost)netKill(m);if(NOW-m.myHitT<30000&&!m.summoned)grantKill(m.type,m.x,m.y);}
-function mobDie(m){m.dead=true;m.deadT=NOW;m.hp=0;m.respawnAt=NOW+(m.d.boss?120000:m.d.mid?MID_RESPAWN:rand(30000,45000));/* 일반 몬스터는 30~45초 뒤 다시 나타남 *//* 중간보스는 30분 뒤 다시 나타남 (껐다 켜도 실제 시각 기준) */if(m.d.mid&&!m.summoned&&MAP){if(P){P.midKill=P.midKill||{};P.midKill[MAP.id]=Date.now();}log(`⚔ 중간보스 ${m.d.name}을(를) 쓰러뜨렸습니다. 30분 뒤 다시 나타납니다.`,'c-sys');}if(P.target===m)P.target=null;sfx('kill');sparks(m.x,m.y,'#ffffff',8);if(m.d.boss)shake(8,500);
+function mobDie(m){m.dead=true;m.deadT=NOW;m.hp=0;m.respawnAt=NOW+(m.d.boss?120000:m.d.mid?MID_RESPAWN:rand(45000,70000));/* 일반 몬스터는 45~70초 뒤 다시 나타남 *//* 중간보스는 30분 뒤 다시 나타남 (껐다 켜도 실제 시각 기준) */if(m.d.mid&&!m.summoned&&MAP){if(P){P.midKill=P.midKill||{};P.midKill[MAP.id]=Date.now();}log(`⚔ 중간보스 ${m.d.name}을(를) 쓰러뜨렸습니다. 30분 뒤 다시 나타납니다.`,'c-sys');}if(P.target===m)P.target=null;sfx('kill');sparks(m.x,m.y,'#ffffff',8);if(m.d.boss)shake(8,500);
   // 보스·중간보스가 쓰러지면 그가 불러낸 졸개들도 연기처럼 사라짐 (보상 없음)
   if((m.d.boss||m.d.mid)&&MAP){let n=0;for(const o of MAP.mobs)if(o.summoned&&!o.dead&&(o.summoner===m||!o.summoner)){o.dead=true;o.deadT=NOW;o.hp=0;o.aggro=false;if(P.target===o)P.target=null;fx('smoke',o.x,o.y,{});n++;}if(n)log(`${m.d.name}이(가) 쓰러지자 불러낸 졸개 ${n}마리가 사라졌습니다.`,'c-sys');}}
 function grantKill(type,x,y){const p=P;if(!p||p.dead)return;tutEvent('kill');const d=MOBS[type],s=mobStats(d,(MAP&&MAP.depth)||1);
